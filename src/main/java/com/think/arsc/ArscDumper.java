@@ -51,9 +51,9 @@ import jxl.write.biff.RowsExceededException;
  * <p>This can also be used to get a list of the different entry names, or to get a list of resource
  * entries for which no default value exists (baseless keys).
  * <p>
- * <p>Example usage to save all resource configurations to a CSV file:
+ * <p>Example usage to save all resource configurations to a XLS file:
  * <p>
- * <pre>ArscDumper.jar --apk=/apk_dir/my.apk --output=/csv_dir/my.csv --type=configs</pre>
+ * <pre>ArscDumper.jar --apk=/apk_dir/my.apk --output=/xls_dir/my.xls -type=string</pre>
  *
  * <p>This CSV could then be sorted by "Null Entries" in descending order to spot resource
  * configurations that could potentially be removed for large byte savings.
@@ -61,6 +61,7 @@ import jxl.write.biff.RowsExceededException;
 public class ArscDumper {
 
   private static final String RESOURCES_ARSC = "resources.arsc";
+
   private static class Params {
     String apkFile;
     List<String> types;
@@ -87,8 +88,8 @@ public class ArscDumper {
     Options options = new Options();
     options.addOption("h", "help", false, "print this message");
     options.addRequiredOption("a", "apk", true, "input apk file");
-    options.addOption("type", true, "the output type in excel file, can split by ',',like string,color ");
-    options.addOption("o", true, "out put file");
+    options.addOption("t", "type", true, "the output type in excel file, can split by ',',like string,color ");
+    options.addOption("o", "output", true, "out put file");
     try {
       // parse the command line arguments
       CommandLine line = parser.parse(options, args);
@@ -123,7 +124,7 @@ public class ArscDumper {
   }
 
   /**
-   * Returns a CSV row (as a list of strings) describing a particular resource configuration. If
+   * Returns a XLS row (as a list of strings) describing a particular resource configuration. If
    * showKeys is true, the "Keys" column will be populated with the keys of the resource entries in
    * that configuration. Otherwise, the "Keys" column will be blank.
    */
