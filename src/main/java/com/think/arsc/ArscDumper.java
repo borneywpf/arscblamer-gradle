@@ -85,7 +85,7 @@ public class ArscDumper {
     Params params = new Params();
     CommandLineParser parser = new DefaultParser();
     Options options = new Options();
-    options.addOption("help", false, "print this message");
+    options.addOption("h", "help", false, "print this message");
     options.addRequiredOption("a", "apk", true, "input apk file");
     options.addOption("type", true, "the output type in excel file, can split by ',',like string,color ");
     options.addOption("o", true, "out put file");
