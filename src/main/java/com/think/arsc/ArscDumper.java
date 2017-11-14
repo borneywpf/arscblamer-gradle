@@ -53,7 +53,7 @@ import jxl.write.biff.RowsExceededException;
  * <p>
  * <p>Example usage to save all resource configurations to a XLS file:
  * <p>
- * <pre>ArscDumper.jar --apk=/apk_dir/my.apk --output=/xls_dir/my.xls -type=string</pre>
+ * <pre>ArscDumper.jar --apk /apk_dir/my.apk --output=/xls_dir/my.xls -type string</pre>
  *
  * <p>This CSV could then be sorted by "Null Entries" in descending order to spot resource
  * configurations that could potentially be removed for large byte savings.
@@ -62,6 +62,9 @@ public class ArscDumper {
 
   private static final String RESOURCES_ARSC = "resources.arsc";
 
+  /**
+   * This is result for parse args
+   */
   private static class Params {
     String apkFile;
     List<String> types;
@@ -275,6 +278,12 @@ public class ArscDumper {
     return -1;
   }
 
+  /**
+   * write key to excel
+   * @param sheet
+   * @param typeChunks
+   * @throws WriteException
+   */
   private static void writeName(WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
     int cell = 1;
     for (TypeChunk typeChunk : typeChunks) {
@@ -289,6 +298,12 @@ public class ArscDumper {
     }
   }
 
+  /**
+   * write id,name and config to excel cell first
+   * @param sheet
+   * @param typeChunks
+   * @throws WriteException
+   */
   private static void writeHead(WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
     int cell = 0;
     sheet.addCell(new Label(cell++, 0, "ID"));
