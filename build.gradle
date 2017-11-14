@@ -11,6 +11,7 @@ dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
     compile 'com.google.guava:guava:23.3-jre'
     compile group: 'net.sourceforge.jexcelapi', name: 'jxl', version: '2.6'
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
 }
 
 jar {

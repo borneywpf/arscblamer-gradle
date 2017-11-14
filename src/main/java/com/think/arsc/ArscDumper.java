@@ -16,7 +16,15 @@
 
 package com.think.arsc;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,26 +61,65 @@ import jxl.write.biff.RowsExceededException;
 public class ArscDumper {
 
   private static final String RESOURCES_ARSC = "resources.arsc";
-  private final ResourceTableChunk chunk;
-
-  /**
-   * Creates a new {@link ArscDumper}.
-   */
-  public ArscDumper(ResourceTableChunk chunk) {
-    this.chunk = chunk;
+  private static class Params {
+    String apkFile;
+    List<String> types;
+    String output;
   }
 
   public static void main(String[] args) throws IOException {
-    System.out.println(Arrays.toString(args));
-    if (args.length >= 1) {
-      File apk = new File(args[0]);
-      if (apk.exists()) {
-        ResourceTableChunk tableChunk = providesResourceTableChunk(apk);
-        ArscDumper dumper = new ArscDumper(tableChunk);
-        dumper.dumpRunTableChunk(tableChunk);
-        dumper.dumpWriteTableChunk(tableChunk);
+    Optional<Params> optional = parseParams(args);
+    if (optional.isPresent()) {
+      Params params = optional.get();
+      File apk = new File(params.apkFile);
+      ResourceTableChunk tableChunk = providesResourceTableChunk(apk);
+      if (params.output != null) {
+        ArscDumper.dumpWriteTableChunk(tableChunk, params);
+      } else {
+        ArscDumper.dumpRunTableChunk(tableChunk);
       }
     }
+  }
+
+  private static Optional<Params> parseParams(String[] args) {
+    Params params = new Params();
+    CommandLineParser parser = new DefaultParser();
+    Options options = new Options();
+    options.addOption("help", false, "print this message");
+    options.addRequiredOption("a", "apk", true, "input apk file");
+    options.addOption("type", true, "the output type in excel file, can split by ',',like string,color ");
+    options.addOption("o", true, "out put file");
+    try {
+      // parse the command line arguments
+      CommandLine line = parser.parse(options, args);
+      if (line.hasOption("apk")) {
+        params.apkFile = line.getOptionValue("apk");
+      }
+
+      if (line.hasOption("type")) {
+        params.types = Arrays.asList(line.getOptionValue("type").split(","));
+      }
+      if (line.hasOption("o")) {
+        params.output = line.getOptionValue("o");
+      }
+
+      if (params.apkFile != null) {
+        File apk = new File(params.apkFile);
+        if (apk.exists()) {
+          return Optional.of(params);
+        }
+      }
+    } catch (ParseException exp) {
+      // oops, something went wrong
+      System.err.println("Parsing failed.  Reason: " + exp.getMessage());
+    }
+    printUsage(options);
+    return Optional.absent();
+  }
+
+  private static void printUsage(Options options) {
+    HelpFormatter formatter = new HelpFormatter();
+    formatter.printHelp("arscblamer", options);
   }
 
   /**
@@ -80,11 +127,11 @@ public class ArscDumper {
    * showKeys is true, the "Keys" column will be populated with the keys of the resource entries in
    * that configuration. Otherwise, the "Keys" column will be blank.
    */
-  private void dumpWriteTableChunk(ResourceTableChunk chunk) {
+  private static void dumpWriteTableChunk(ResourceTableChunk chunk, Params params) {
     WritableWorkbook book = null;
     try {
 
-      book = Workbook.createWorkbook(new File("/home/borney/data/tmp/arsc.xls"));
+      book = Workbook.createWorkbook(new File(params.output));
       StringPoolChunk chunkStringPool = chunk.getStringPool();
       Collection<PackageChunk> chunkPackages = chunk.getPackages();
       for (PackageChunk chunkPackage : chunkPackages) {
@@ -92,16 +139,18 @@ public class ArscDumper {
         StringPoolChunk typeStringPool = chunkPackage.getTypeStringPool();
         for (int index = 0, count = typeStringPool.getStringCount(); index < count; index++) {
           String type = typeStringPool.getString(index);
-          WritableSheet sheet = book.createSheet(type, index);
-          Collection<TypeChunk> typeChunks = chunkPackage.getTypeChunks(type);
+          if (params.types == null || params.types.size() == 0 || params.types.contains(type)) {
+            WritableSheet sheet = book.createSheet(type, index);
+            Collection<TypeChunk> typeChunks = chunkPackage.getTypeChunks(type);
 
-          writeHead(sheet, typeChunks);
+            writeHead(sheet, typeChunks);
 
-          writeID(sheet, typeChunks, chunkPackage);
+            writeID(sheet, typeChunks, chunkPackage);
 
-          writeName(sheet, typeChunks);
+            writeName(sheet, typeChunks);
 
-          writeEntryValue(chunkStringPool, sheet, typeChunks);
+            writeEntryValue(chunkStringPool, sheet, typeChunks);
+          }
         }
       }
 
@@ -127,7 +176,7 @@ public class ArscDumper {
     }
   }
 
-  private void writeID(WritableSheet sheet, Collection<TypeChunk> typeChunks, PackageChunk chunkPackage) throws WriteException {
+  private static void writeID(WritableSheet sheet, Collection<TypeChunk> typeChunks, PackageChunk chunkPackage) throws WriteException {
     int cell = 0;
     for (TypeChunk typeChunk : typeChunks) {
       Collection<TypeChunk.Entry> values = typeChunk.getEntries().values();
@@ -141,7 +190,7 @@ public class ArscDumper {
     }
   }
 
-  private void writeEntryValue(StringPoolChunk chunkStringPool, WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
+  private static void writeEntryValue(StringPoolChunk chunkStringPool, WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
     int cell = 2;
     for (TypeChunk typeChunk : typeChunks) {
       Set<Entry<Integer, TypeChunk.Entry>> entries = typeChunk.getEntries().entrySet();
@@ -174,7 +223,7 @@ public class ArscDumper {
     }
   }
 
-  private String getResourcesValue(ResourceValue resourceValue, StringPoolChunk chunkStringPool) {
+  private static String getResourcesValue(ResourceValue resourceValue, StringPoolChunk chunkStringPool) {
     int data = resourceValue.getData();
     switch (resourceValue.getType()) {
       case STRING:
@@ -210,7 +259,7 @@ public class ArscDumper {
     return "";
   }
 
-  private int getRowByName(Collection<TypeChunk> typeChunks, String key) {
+  private static int getRowByName(Collection<TypeChunk> typeChunks, String key) {
     for (TypeChunk typeChunk : typeChunks) {
       Set<Entry<Integer, TypeChunk.Entry>> entries = typeChunk.getEntries().entrySet();
       int row = 1;
@@ -225,7 +274,7 @@ public class ArscDumper {
     return -1;
   }
 
-  private void writeName(WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
+  private static void writeName(WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
     int cell = 1;
     for (TypeChunk typeChunk : typeChunks) {
       Set<Entry<Integer, TypeChunk.Entry>> entries = typeChunk.getEntries().entrySet();
@@ -239,7 +288,7 @@ public class ArscDumper {
     }
   }
 
-  private void writeHead(WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
+  private static void writeHead(WritableSheet sheet, Collection<TypeChunk> typeChunks) throws WriteException {
     int cell = 0;
     sheet.addCell(new Label(cell++, 0, "ID"));
     sheet.addCell(new Label(cell++, 0, "Name"));
@@ -251,7 +300,7 @@ public class ArscDumper {
     }
   }
 
-  private void dumpRunTableChunk(ResourceTableChunk chunk) {
+  private static void dumpRunTableChunk(ResourceTableChunk chunk) {
     System.out.println("  |--StringPoolChunk");
     StringPoolChunk stringPool = chunk.getStringPool();
     for (int index = 0, count = stringPool.getStringCount(); index < count; index++) {
@@ -322,7 +371,7 @@ public class ArscDumper {
             ResourceValue resourceValue = value.getValue();
             valueStr = getResourcesValue(resourceValue, stringPool);
           }
-          System.out.println("        key:" + key + " flags:" + flags + " valueValue:" + valueStr);
+          System.out.println("        key:" + key + " flags:" + flags + " value:" + valueStr);
         }
       }
     }
