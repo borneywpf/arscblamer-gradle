@@ -1,3 +1,4 @@
+关于resources.arsc的文件分析可以参见[我的博客](http://thinkdevos.net/2017/11/14/2017-11-14-arse/)
 # arscblamer
 
 该工程以[android-arscblamer](https://github.com/google/android-arscblamer)为基础做修改，主要用来解析apk文件中的resources.arsc文件并输出解析内容。
